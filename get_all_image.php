@@ -9,9 +9,15 @@ try
     }
 
     $url = $argv[1];
-    if (!preg_match('/^(http|https):\/\//', $url))
+    if (!preg_match('/^https?:\/\//', $url))
     {
         throw new Exception('Invalid url.');
+    }
+
+    $header = @get_headers($url);
+    if (!preg_match('/^HTTP\/.*\s+200\s/i', $header[0]))
+    {
+        throw new Exception('Target page does not found.');
     }
 
     $html_source = file_get_contents($url);
@@ -22,6 +28,8 @@ try
     }
 
     preg_match_all('/src="(.*?(\.jpg|\.jpeg|\.gif|\.png))"/i', $html_source, $matches);
+
+    echo strlen($html_source)."\n";
 
     if (!isset($matches[1]) || count($matches[1]) === 0)
     {
@@ -38,17 +46,24 @@ try
         mkdir('./'.$save_dir);
     }
 
-    $save_cnt = 0;
-    foreach($matches[1] as $img_url)
+    $save_cnt = $duplicate_cnt = $error_cnt = 0;
+    $saved_list = [];
+    foreach($matches[1] as $k => $img_url)
     {
         $fname_tmp = explode('/', $img_url);
         $fname_tmp = array_reverse($fname_tmp);
-        $fpath = sprintf('%s/%s', $save_dir, $fname_tmp[0]);
+        $fpath = sprintf('%s/%s_%s', $save_dir, $k, $fname_tmp[0]);
 
-        if (!preg_match('/^(http|https):\/\//', $img_url))
+        if (!preg_match('/^https?:\/\//', $img_url))
         {
             $img_url = sprintf('%s/%s', $base, $img_url);
         }
+        if (in_array($img_url, $saved_list))
+        {
+            $duplicate_cnt++;
+            continue;
+        }
+
         $data = @file_get_contents( $img_url );
         if ( $data )
         {
@@ -57,15 +72,16 @@ try
 
         if (!file_exists($fpath))
         {
-            echo sprintf('ERROR: fialed to save img. {%s}%s', $img_url, "\n");
+            $error_cnt++;
         }
         else
         {
             $save_cnt++;
+            $saved_list[] = $img_url;
         }
     }
 
-    $message = sprintf('end. {all:%s, saves:%s}', count($matches[1]), $save_cnt);
+    $message = sprintf('end. {all:%s, saved:%s, duplicate:%s, error:%s}', count($matches[1]), $save_cnt, $duplicate_cnt, $error_cnt);
 }
 catch (Exception $e)
 {
