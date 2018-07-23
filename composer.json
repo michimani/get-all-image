@@ -1,0 +1,9 @@
+{
+    "name": "michimani/get-all-image",
+    "version": "0.1.0",
+    "description": "get-all-image is a simple php class for getting images from a web page.",
+    "license": "MIT",
+    "require": {
+        "php": ">= 5.6.0"
+    },
+}
